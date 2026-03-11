@@ -1,4 +1,8 @@
 import streamlit as st
+
+# 세션 상태 초기화 에러 방지를 위해 최상단 배치
+if 'step' not in st.session_state: st.session_state.step = 1
+
 import pandas as pd
 import numpy as np
 import plotly.express as px
