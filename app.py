@@ -121,26 +121,26 @@ else:
     with t3:
         st.subheader("3. 상관관계 및 다중공선성 진단")
     
-    col_a, col_b = st.columns([0.6, 0.4])
+        col_a, col_b = st.columns([0.6, 0.4])
     
-    with col_a:
-        st.write("**🔗 Feature Correlation Heatmap**")
-        corr = pd.DataFrame(np.random.uniform(-1, 1, (5, 5)), 
-                             columns=['Age', 'Data', 'App', 'Call', 'Svc'], 
-                             index=['Age', 'Data', 'App', 'Call', 'Svc'])
-        st.dataframe(corr.style.background_gradient(cmap='coolwarm').format("{:.2f}"))
+        with col_a:
+            st.write("**🔗 Feature Correlation Heatmap**")
+            corr = pd.DataFrame(np.random.uniform(-1, 1, (5, 5)), 
+                                 columns=['Age', 'Data', 'App', 'Call', 'Svc'], 
+                                 index=['Age', 'Data', 'App', 'Call', 'Svc'])
+            st.dataframe(corr.style.background_gradient(cmap='coolwarm').format("{:.2f}"))
     
-    with col_b:
-        st.write("**🚨 VIF(다중공선성) 위험군**")
-        vif_df = pd.DataFrame({
-            "변수 그룹": ["데이터 사용량 관련", "통화 시간 관련"],
-            "대상 변수": ["total_data, night_data", "total_call, avg_call"],
-            "VIF 지수": [15.2, 12.8],
-            "권고": ["변수 결합(PCA)", "대표 변수 선택"]
-        })
-        st.table(vif_df)
+        with col_b:
+            st.write("**🚨 VIF(다중공선성) 위험군**")
+            vif_df = pd.DataFrame({
+                "변수 그룹": ["데이터 사용량 관련", "통화 시간 관련"],
+                "대상 변수": ["total_data, night_data", "total_call, avg_call"],
+                "VIF 지수": [15.2, 12.8],
+                "권고": ["변수 결합(PCA)", "대표 변수 선택"]
+            })
+            st.table(vif_df)
     
-    st.warning("**[Action]** 상관계수 0.8 이상인 변수 쌍이 다수 발견되었습니다. VIF가 10 이상인 변수들은 선형 모델 사용 시 반드시 하나를 제거하거나 차원을 축소하십시오.")
+        st.warning("**[Action]** 상관계수 0.8 이상인 변수 쌍이 다수 발견되었습니다. VIF가 10 이상인 변수들은 선형 모델 사용 시 반드시 하나를 제거하거나 차원을 축소하십시오.")
 
     with t4:
         st.subheader("4. 최적 Binning 구간 제안")
