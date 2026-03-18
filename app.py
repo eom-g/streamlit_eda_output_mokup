@@ -84,21 +84,25 @@ else:
     # ---------------------------------------------------------
     # [분석가용] 데이터 진단 모드 (동일)
     # ---------------------------------------------------------
-    t1, t2, t3, t4 = st.tabs(["🧹 1. Cleansing/Cardinality", "📉 2. 이상치 영향도", "🔗 4. 상관관계", "📐 5. Binning"])
+    t1, t2, t3, t4 = st.tabs(["🧹 1. Cleansing/Cardinality", "📉 2. 이상치 영향도", "🔗 3. 상관관계", "📐 4. Binning"])
     
     with t1:
-        st.subheader("1. Zero-Variance 변수 식별")
+        st.subheader("1-1. Zero-Variance 변수 식별")
         st.table(pd.DataFrame({"변수명": ["is_active", "country"], "값": ["Y", "82"], "조치": ["제거", "제거"]}))
         
-        st.subheader("2. Cardinality 체크")
+        st.subheader("1-2. Cardinality 체크")
         card_df = pd.DataFrame({"변수명": ["area", "model", "grade"], "Unique": [1450, 420, 5], "Status": ["High", "High", "Normal"]})
-        st.dataframe(card_df.style.map(lambda x: 'background-color: lightcoral' if x == 'High' else '', subset=['Status']))
+        def color_high(val):
+            return 'background-color: lightcoral' if val == 'High' else ''
+        st.dataframe(card_df.style.map(color_high, subset=['Status']))
 
     with t2:
         st.subheader("3. Outlier 영향도 분석 (이상치 제거 전/후)")
         c1, c2 = st.columns(2)
         c1.bar_chart(np.random.exponential(50, 15))
+        c1.caption("X축: 사용량 구간 / Y축: 고객 빈도")
         c2.bar_chart(np.random.normal(30, 5, 15))
+        c2.caption("X축: 사용량 구간 / Y축: 고객 빈도")
         st.table(pd.DataFrame({"항목": ["평균", "Std", "Max"], "data_usage": ["-29.2%", "-45.1%", "-88.5%"]}).set_index("항목"))
 
     with t3:
@@ -109,3 +113,4 @@ else:
     with t4:
         st.subheader("5. 최적 Binning 구간 제안")
         st.bar_chart(pd.DataFrame({"Target Rate(%)": [45.2, 22.5, 12.0, 5.1]}, index=["0-6m", "6-12m", "12-24m", "24m+"]))
+        st.info("**제안 사유**: 가입 초기(6개월 이내)의 이탈률이 급격히 높아 해당 구간을 별도 관리군으로 분리 권고")
