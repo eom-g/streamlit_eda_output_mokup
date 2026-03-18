@@ -3,91 +3,108 @@ import pandas as pd
 import numpy as np
 import time
 
-# --- 1. 기본 설정 및 세션 초기화 ---
-st.set_page_config(page_title="Gen-AI EDA Agent", layout="wide")
+# --- 1. 페이지 설정 ---
+st.set_page_config(page_title="EDA Agent Output Report", layout="wide")
 
-if 'step' not in st.session_state:
-    st.session_state.step = 1
+# 시연을 위해 세션 상태에 모드 설정 (나중에 통합 시 자동 연동됨)
+if 'mode' not in st.session_state:
+    st.session_state.mode = "🏢 사업팀 인사이트 모드"
 
-# --- 2. 사이드바 ---
+# --- 2. 사이드바 (시연용 모드 스위처) ---
 with st.sidebar:
-    st.title("🤖 Agent Status")
-    st.success("Feature Store 연결됨 (1,500+)")
-    if st.button("🔄 처음부터 다시 시작"):
-        st.session_state.step = 1
-        st.rerun()
+    st.title("🎨 시연 설정")
+    st.session_state.mode = st.radio(
+        "보고 대상 선택",
+        ["🏢 사업팀 인사이트 모드", "🧪 분석가 데이터 진단 모드"]
+    )
+    st.divider()
+    st.info("실제 구동 시에는 앞 단계의 선택값이 자동으로 반영됩니다.")
 
-# --- 3. 메인 화면 ---
-st.title("🔍 Gen-AI EDA Agent")
-
-# --- Step 1. 분석 모드 선택 (항상 표시) ---
-st.header("Step 1. 분석 모드 선택")
-mode = st.radio(
-    "사용자 유형을 선택하세요.",
-    ["🏢 사업팀 인사이트 모드", "🧪 분석가 데이터 진단 모드"],
-    horizontal=True,
-    disabled=(st.session_state.step > 1) # 시작 후에는 모드 고정 (선택사항)
-)
-
+# --- 3. 리포트 헤더 ---
+st.title("📊 최종 분석 리포트")
+st.caption(f"분석 대상: 최근 3개월 Sim Only 가입자 | 모드: {st.session_state.mode}")
 st.divider()
 
-# --- Step 2. 분석 목적 입력 (Step 1 완료 후 계속 유지) ---
-if st.session_state.step >= 1:
-    st.header("Step 2. 분석 목적 입력")
+# --- 4. 모드별 맞춤 리포트 출력 ---
+
+if "사업팀" in st.session_state.mode:
+    # ---------------------------------------------------------
+    # [사업팀용] 1~4번 항목 중심: 비즈니스 인사이트 및 전략
+    # ---------------------------------------------------------
+    col1, col2, col3 = st.columns(3)
+    col1.metric("타겟 모수", "1,245 명", "신규 유입")
+    col2.metric("매출 기여도(Lift)", "2.4배", "전체 대비")
+    col3.metric("AI 예측 전환율", "15.8%", "High Index")
+
+    t1, t2, t3 = st.tabs(["💡 1-2. 가설 검증 및 현상", "📈 3. 핵심 영향 인자", "🎯 4. 고객 페르소나/전략"])
     
-    if "사업팀" in mode:
-        c1, c2 = st.columns(2)
-        target = c1.text_input("🎯 타겟 정의", "최근 3개월 Sim Only 가입자")
-        hypo = c2.text_area("💡 가설", "20대 유저의 유튜브 사용량이 높을 것이다.", height=68)
-    else:
-        c1, c2 = st.columns(2)
-        y_label = c1.text_input("🎯 Target (Y)", "is_churn")
-        analyst_goal = c2.text_area("📝 분석 목적", "해지 예측 모델용 피처 품질 진단 요청", height=68)
+    with t1:
+        st.subheader("가설: '20대 타겟은 심야 시간대 유튜브 사용이 높을 것이다'")
+        st.success("✅ **검증 결과: 가설 채택**")
+        st.write("실제 데이터 확인 결과, 20대 타겟군의 유튜브 사용량은 일반 고객 대비 **142% 높게** 나타났습니다.")
+        
+        # 시각화 (사업팀용 직관적 차트)
+        chart_data = pd.DataFrame({
+            "집단": ["타겟군(20대)", "일반군"],
+            "유튜브 사용 지수": [85, 35]
+        }).set_index("집단")
+        st.bar_chart(chart_data)
 
-    # 버튼은 Step 1 상태일 때만 표시하거나, 다시 누를 수 있게 둠
-    if st.session_state.step == 1:
-        if st.button("🪄 AI 변수 매핑 시작", type="primary"):
-            with st.spinner("메타 테이블에서 변수 추출 중..."):
-                time.sleep(1)
-                st.session_state.step = 2
-                st.rerun()
+    with t2:
+        st.subheader("타겟 전환에 영향을 미치는 주요 피처")
+        st.write("AI 모델이 분석한 결과, 아래 3가지 요소가 가장 결정적인 차이를 만듭니다.")
+        st.progress(0.85, text="심야 시간대 데이터 소비량 (85%)")
+        st.progress(0.62, text="OTT(넷플릭스 등) 시청 시간 (62%)")
+        st.progress(0.31, text="주 활동 지역(대학가/오피스) (31%)")
 
-# --- Step 3. 최종 분석 셋업 (Step 2 완료 시 아래에 추가) ---
-if st.session_state.step >= 2:
-    st.divider()
-    st.header("Step 3. 최종 분석 셋업 및 리포트")
+    with t3:
+        st.subheader("추천 페르소나 & 액션 아이템")
+        c1, c2 = st.columns(2)
+        with c1:
+            st.info("### 👥 Persona: 야행성 스트리머\n- **특징**: 22시~02시 활동량 집중\n- **Action**: 해당 시간대 전용 데이터 팩 푸시 발송")
+        with c2:
+            st.warning("### 👥 Persona: 자급제 알뜰족\n- **특징**: 쇼핑 앱 및 멤버십 활용도 높음\n- **Action**: 제휴 포인트 적립 요금제 노출")
+
+else:
+    # ---------------------------------------------------------
+    # [분석가용] 5~13번 항목 중심: 데이터 품질 및 기술 검증
+    # ---------------------------------------------------------
+    st.warning("🧪 본 리포트는 데이터 모델링 적합성 및 통계 검증 수치를 포함합니다.")
     
-    default_vars = ["고객 연령", "고객 성별", "데이터 사용량(MB)", "넷플릭스 시청 시간"]
-    st.multiselect("✅ AI 선별 지표 (수정 가능)", options=default_vars + ["평균 통화 시간", "최근 구매 금액"], default=default_vars)
+    t1, t2, t3 = st.tabs(["🔍 5-8. 품질 및 통계 분석", "⚙️ 9-11. 유의성/중요도", "📐 12-13. 한계점/가이드"])
 
-    if st.session_state.step == 2:
-        if st.button("🚀 분석 실행 및 리포트 생성"):
-            with st.status("BigQuery 분석 엔진 가동 중...") as status:
-                time.sleep(1)
-                status.update(label="분석 완료!", state="complete")
-            st.session_state.step = 3
-            st.rerun()
+    with t1:
+        st.subheader("데이터 품질 및 다중공선성 진단")
+        q_col, v_col = st.columns([0.6, 0.4])
+        with q_col:
+            st.dataframe(pd.DataFrame({
+                "Feature": ["cust_age", "data_mb", "app_freq", "call_cnt"],
+                "Missing": ["0%", "0.2%", "12.4%", "0%"],
+                "Outlier": ["None", "24건", "150건", "None"],
+                "Skewness": [0.12, 2.45, 1.88, 0.45]
+            }))
+        with v_col:
+            st.write("**VIF (다중공선성)**")
+            st.code("data_mb: 8.4 (High)\napp_freq: 2.1 (Low)\ncall_cnt: 1.5 (Low)")
+            st.caption("※ data_mb 피처는 변수 처리가 필요함")
 
-# --- Output. 리포트 결과 (최하단에 추가) ---
-if st.session_state.step >= 3:
-    st.divider()
-    st.header(f"📊 분석 결과 리포트 ({mode})")
+    with t2:
+        st.subheader("Feature 유의성 및 중요도 (SHAP Value)")
+        st.write("P-Value 검정 결과 모든 주요 피처가 **0.05 미만**으로 유의함이 확인되었습니다.")
+        # 분석가용 기술적 차트
+        st.area_chart(np.random.randn(20, 3))
+        st.caption("각 피처별 타겟 기여도 추이 분석")
 
-    if "사업팀" in mode:
-        t1, t2, t3 = st.tabs(["💡 가설/현상", "📈 영향도", "🎯 전략"])
-        with t1:
-            st.success("✅ 가설 일치: 20대 타겟의 유튜브 사용량이 비교군 대비 2.4배 높음")
-            st.bar_chart(pd.DataFrame([85, 35], index=["타겟", "비교군"]))
-        with t2:
-            st.write("핵심 영향 인자: **'심야 시간대 데이터 사용량'**")
-            st.progress(85)
-        with t3:
-            st.info("**Persona: 야행성 스트리머**\n\n- 제안: 넷플릭스 결합 요금제 캠페인")
-    else:
-        t1, t2, t3 = st.tabs(["🔍 품질진단", "⚙️ 통계분석", "📐 가이드"])
-        with t1:
-            st.table(pd.DataFrame({"지표": ["cust_age", "data_mb"], "결측률": ["0%", "0.2%"]}))
-        with t2:
-            st.area_chart(np.random.randn(10, 2))
-        with t3:
-            st.error("⚠️ 위치 데이터 결측치 과다로 모델링 제외 권고")
+    with t3:
+        st.subheader("분석 한계점 및 모델링 권고")
+        st.error("⚠️ **데이터 한계**: 위치(GPS) 데이터의 결측치가 40% 이상으로 신뢰도가 낮음")
+        st.markdown("""
+        - **추천 모델**: 비선형 관계 대응에 유리한 **LightGBM** 또는 **XGBoost**
+        - **전처리 가이드**: `app_freq` 결측치는 중앙값(Median) 대치 권장
+        - **Next Step**: 위치 데이터를 제외한 행동 패턴 위주의 피처 엔지니어링 수행
+        """)
+
+# --- 5. 공통 하단 버튼 ---
+st.divider()
+if st.button("📄 리포트 PDF로 내보내기"):
+    st.write("PDF 리포트를 생성하고 있습니다...")
