@@ -27,20 +27,28 @@ if "사업팀" in mode:
     
     with t1:
         st.subheader("📍 지표별 특징 Index (전체 대비)")
+        # 사라졌던 집단간 비교 지표 복구
         idx_df = pd.DataFrame({
             "지표명": ["유튜브 시청시간", "야간 데이터사용", "주말 통화량", "멤버십 활용"],
             "Index": [242, 185, 110, 95]
         }).sort_values("Index", ascending=False)
+        
         for _, row in idx_df.iterrows():
             col_l, col_r = st.columns([0.2, 0.8])
             col_l.write(f"**{row['지표명']}**")
+            # Index 100 기준 시각화
             col_r.progress(min(row['Index']/300, 1.0), text=f"Index: {row['Index']}")
+        
+        st.subheader("🔍 변수별 예측력 (IV Rank)")
+        iv_data = pd.DataFrame({"IV Score": [0.45, 0.32, 0.15, 0.08]}, 
+                               index=["데이터사용량", "앱접속빈도", "연령", "가입기간"])
+        st.bar_chart(iv_data)
 
     with t2:
         st.subheader("👤 고객 기본 프로파일링 (연령대 분포)")
-        # 요청하신 연령대 그룹화 데이터 생성
+        # 요청하신 연령대 x축 (10대 ~ 80대 이상) 반영
         age_groups = ["10대", "20대", "30대", "40대", "50대", "60대", "70대", "80대 이상"]
-        age_counts = [5, 42, 25, 15, 8, 3, 1, 1] # 샘플 데이터
+        age_counts = [5, 42, 25, 15, 8, 3, 1, 1]
         
         hist_df = pd.DataFrame({
             "연령대": age_groups,
@@ -57,42 +65,46 @@ if "사업팀" in mode:
 
 else:
     # ---------------------------------------------------------
-    # [분석가용] 1~7번 항목
+    # [분석가용] 1~7번 항목 (ValueError 수정 완료)
     # ---------------------------------------------------------
     t1, t2, t3, t4 = st.tabs(["🧹 1-2. 클렌징", "📉 3. 이상치 영향도", "🔗 4-6. 상관관계", "📐 7. Binning"])
     
     with t1:
         st.subheader("1-2️⃣ 데이터 클렌징 및 카디널리티")
-        st.table(pd.DataFrame({"변수명": ["is_active", "country"], "값": ["Y", "82"], "비고": ["Zero-Variance"]}))
+        # ValueError 해결: 리스트 길이를 2개로 통일
+        st.table(pd.DataFrame({
+            "변수명": ["is_active", "country"], 
+            "값": ["Y", "82"], 
+            "비고": ["Zero-Variance", "Zero-Variance"] # 개수 맞춤
+        }))
+        
         card_df = pd.DataFrame({"변수": ["area", "model"], "Unique": [1450, 420], "Status": ["⚠️ High", "⚠️ High"]})
         st.dataframe(card_df.style.highlight_max(axis=0, color='lightcoral'))
 
     with t2:
-        st.subheader("3️⃣ Outlier 영향도 분석 (이상치 제거 전/후 비교)")
+        st.subheader("3️⃣ Outlier 영향도 분석 (제거 전/후 비교)")
         st.info("💡 이상치가 평균값을 얼마나 왜곡시키는지 진단합니다.")
         
         c1, c2 = st.columns(2)
-        # x, y축 명시를 위한 가이드와 차트
         with c1:
             st.write("**[A] 제거 전 (Raw Data)**")
             st.bar_chart(np.random.exponential(50, 20))
-            st.caption("X축: 데이터 사용량 구간 / Y축: 고객 빈도 (이상치로 인해 우측으로 길게 늘어짐)")
+            st.caption("X축: 데이터 사용량 구간(MB) / Y축: 고객 빈도(명)")
         
         with c2:
             st.write("**[B] 제거 후 (Refined)**")
             st.bar_chart(np.random.normal(30, 5, 20))
-            st.caption("X축: 데이터 사용량 구간 / Y축: 고객 빈도 (정상 범위 내 분포 집중)")
+            st.caption("X축: 데이터 사용량 구간(MB) / Y축: 고객 빈도(명)")
         
         st.write("#### 📋 주요 피처별 평균 통계량 변화율")
-        st.markdown("> **변화율(%)** = (제거 후 평균 - 제거 전 평균) / 제거 전 평균 * 100")
-        
+        # 통계량 변화율 의미: 이상치 제거 시 중심값(평균)이 얼마나 정상화되었는지 표시
         stat_change = pd.DataFrame({
-            "항목": ["평균(Mean)", "표준편차(Std)", "최대값(Max)"],
+            "통계 항목": ["평균(Mean)", "표준편차(Std)", "최대값(Max)"],
             "data_usage_mb": ["-29.2%", "-45.1%", "-88.5%"],
             "call_dur_min": ["-2.1%", "-5.4%", "-12.0%"]
-        }).set_index("항목")
+        }).set_index("통계 항목")
         st.table(stat_change)
-        st.warning("분석 결과: 'data_usage_mb'는 이상치 제거 시 평균이 약 29% 감소하므로, 반드시 정제 후 모델링이 필요합니다.")
+        st.warning("분석가 가이드: 'data_usage_mb'의 평균 변화율(-29%)이 매우 크므로 이상치 처리가 필수적입니다.")
 
     with t3:
         st.subheader("4-6️⃣ 상관관계 및 다중공선성")
