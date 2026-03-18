@@ -85,38 +85,51 @@ if "Profiling" in mode:
         )
         st.plotly_chart(fig, use_container_width=True)
 
-    with t2:
-        # ---------------------------------------------------------
-        # [사업팀용] 2. 기본 프로파일링 (Doughnut/Pie 비중 중심)
-        # ---------------------------------------------------------
+with t2:
         st.subheader("👤 타겟 기본 프로파일링")
         p1, p2 = st.columns(2)
+        
         with p1:
-            st.write("**⚧ 성별 비중**")
-            st.write("남성: 62% / 여성: 38%")
-            st.progress(0.62)
+            st.write("**⚧ 성별 비중 (Gender Distribution)**")
+            # 1. 성별 도넛 차트 (한눈에 들어오는 시각화)
+            gender_data = pd.DataFrame({"성별": ["남성", "여성"], "비중": [62, 38]})
+            fig_gender = px.pie(gender_data, values='비중', names='성별', hole=0.6,
+                                color_discrete_sequence=['#636EFA', '#EF553B'])
+            fig_gender.update_layout(margin=dict(l=20, r=20, t=20, b=20), height=300, showlegend=True)
+            st.plotly_chart(fig_gender, use_container_width=True)
             
             st.write("**📱 단말 유형 비중**")
-            # 성별/단말유형 비중 (도넛 차트 대신 테이블/진행바 조합으로 깔끔하게 구성)
             device_df = pd.DataFrame({
-                "유형": ["아이폰", "갤럭시프리미엄", "갤럭시중저가", "키즈폰", "중고/기타"],
-                "비중(%)": [45, 35, 10, 2, 8]
+                "유형": ["아이폰", "갤럭시프리미엄", "갤럭시중저가", "중고/기타"],
+                "비중(%)": [45, 35, 12, 8]
             }).set_index("유형")
             st.table(device_df)
 
         with p2:
-            st.write("**📝 가입 및 요금제 유형**")
-            type_df = pd.DataFrame({
-                "Sim Only": [100, 0], # vs 단말약정
-                "중저가 요금제": [60, 40] # vs 고가
-            }, index=["해당 유형", "기타"])
-            st.bar_chart(type_df)
-            st.caption("※ 분석 대상 가입자의 100%가 Sim Only, 60%가 중저가 요금제 이용 중")
+            st.write("**📝 가입 및 요금제 구성 (Service Mix)**")
+            # 2. 가입/요금제 유형: 원래 의도는 '주력 그룹'을 대비시켜 보여주는 것
+            # 범주별로 데이터를 분리하여 Grouped Bar Chart로 구성
+            mix_data = pd.DataFrame({
+                "구분": ["가입유형", "가입유형", "요금제", "요금제"],
+                "항목": ["Sim Only", "단말약정", "중저가", "고가"],
+                "비중(%)": [100, 0, 60, 40]
+            })
+            
+            fig_mix = px.bar(mix_data, x="구분", y="비중(%)", color="항목", barmode="group",
+                             text="비중(%)", color_discrete_sequence=px.colors.qualitative.Pastel)
+            fig_mix.update_layout(height=400, showlegend=True, uniformtext_mode='hide')
+            st.plotly_chart(fig_mix, use_container_width=True)
+            
+            st.info("💡 **의도 분석**: 본 타겟은 **Sim Only(100%)**와 **중저가 요금제(60%)**의 결합 비중이 매우 높아, 결합 할인보다 '순수 요금 가성비'를 중시하는 집단임을 보여줍니다.")
 
         st.divider()
-        st.write("**🎂 연령대 분포**")
-        age_groups = ["10대", "20대", "30대", "40대", "50대", "60대 이상"]
-        st.bar_chart(pd.DataFrame({"고객 수(명)": [5, 48, 28, 12, 5, 2]}, index=age_groups))
+        st.write("**🎂 연령대 분포 상세**")
+        age_df = pd.DataFrame({
+            "연령대": ["10대", "20대", "30대", "40대", "50대", "60대+"],
+            "고객 수": [5, 48, 28, 12, 5, 2]
+        })
+        fig_age = px.bar(age_df, x="연령대", y="고객 수", text="고객 수", color="연령대")
+        st.plotly_chart(fig_age, use_container_width=True)
 
     with t3:
         st.subheader("📣 채널 선호도 반응 분석")
