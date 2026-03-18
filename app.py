@@ -8,7 +8,7 @@ st.set_page_config(page_title="EDA Agent Premium Report", layout="wide")
 # --- 2. 사이드바 제어 ---
 with st.sidebar:
     st.title("🎯 Report Control")
-    mode = st.radio("리포트 모드 선택", ["🏢 사업팀 인사이트 모드", "🧪 분석가 데이터 진단 모드"])
+    mode = st.radio("리포트 모드 선택", ["🏢 Target Profiling Mode", "🧪 Feature Engineering Mode"])
     st.divider()
     st.caption("분석 대상: 최근 3개월 Sim Only 신규 가입자")
 
@@ -16,7 +16,7 @@ with st.sidebar:
 st.title(f"📊 최종 분석 리포트 ({mode})")
 st.divider()
 
-if "사업팀" in mode:
+if "Profiling" in mode:
     # ---------------------------------------------------------
     # [사업팀용] 1~4번 항목 (결합 및 멤버십 인사이트 보강)
     # ---------------------------------------------------------
