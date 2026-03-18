@@ -84,33 +84,80 @@ else:
     # ---------------------------------------------------------
     # [분석가용] 데이터 진단 모드 (동일)
     # ---------------------------------------------------------
-    t1, t2, t3, t4 = st.tabs(["🧹 1. Cleansing/Cardinality", "📉 2. 이상치 영향도", "🔗 3. 상관관계", "📐 4. Binning"])
-    
+    t1, t2, t3, t4 = st.tabs(["🧹 1. Cleansing/Cardinality", "📉 2. 이상치 영향도", "🔗 3. 상관관계/VIF", "📐 4. Binning 제안"])
+
     with t1:
-        st.subheader("1-1. Zero-Variance 변수 식별")
-        st.table(pd.DataFrame({"변수명": ["is_active", "country"], "현재 값": ["Y", "82"], "비고": ["Zero-Variance", "Zero-Variance"]}))
+        st.subheader("1. 데이터 품질 진단")
+        st.write("**[Action]** 아래 변수들은 모델 성능을 저해하거나 연산 낭비를 초래하므로 삭제를 권고합니다.")
+        st.table(pd.DataFrame({
+            "변수명": ["is_active", "country_code"], 
+            "진단 결과": ["Zero-Variance (값 하나)", "Zero-Variance (값 하나)"], 
+            "조치": ["삭제", "삭제"]
+        }))
         
-        st.subheader("1-2. Cardinality 체크")
-        card_df = pd.DataFrame({"변수명": ["area", "model", "grade"], "Unique": [1450, 420, 5], "Status": ["High", "High", "Normal"]})
-        def color_high(val):
-            return 'background-color: lightcoral' if val == 'High' else ''
-        st.dataframe(card_df.style.map(color_high, subset=['Status']))
+        card_df = pd.DataFrame({
+            "변수명": ["main_area_code", "device_model", "cust_grade"],
+            "Unique Count": [1450, 420, 5],
+            "상태": ["High", "High", "Normal"]
+        })
+        st.dataframe(card_df.style.map(lambda x: 'background-color: lightcoral' if x == 'High' else '', subset=['상태']))
+        st.caption("※ High Cardinality 변수는 Target Encoding 또는 차원 축소가 필요합니다.")
 
     with t2:
-        st.subheader("3. Outlier 영향도 분석 (이상치 제거 전/후)")
+        st.subheader("2. Outlier 영향도 분석")
+        st.info("💡 이상치 제거 전/후의 평균 변화율이 10% 이상인 피처는 정제가 필수적입니다.")
         c1, c2 = st.columns(2)
-        c1.bar_chart(np.random.exponential(50, 15))
-        c1.caption("X축: 사용량 구간 / Y축: 고객 빈도")
-        c2.bar_chart(np.random.normal(30, 5, 15))
-        c2.caption("X축: 사용량 구간 / Y축: 고객 빈도")
-        st.table(pd.DataFrame({"항목": ["평균", "Std", "Max"], "data_usage": ["-29.2%", "-45.1%", "-88.5%"]}).set_index("항목"))
+        with c1:
+            st.write("**[전] data_usage_mb**")
+            st.bar_chart(np.random.exponential(50, 15))
+        with c2:
+            st.write("**[후] data_usage_mb**")
+            st.bar_chart(np.random.normal(30, 5, 15))
+    
+        stat_df = pd.DataFrame({"항목": ["평균", "표준편차"], "data_usage": ["-29.2%", "-45.1%"]}).set_index("항목")
+        st.table(stat_change := stat_df)
+        st.error("**[Action]** 'data_usage_mb'는 이상치가 평균을 약 30% 왜곡하고 있어, RobustScaler 적용 또는 Capping 처리를 제안합니다.")
 
     with t3:
-        st.subheader("4. 상관관계 및 다중공선성")
-        corr = pd.DataFrame(np.random.uniform(-1, 1, (5, 5)), columns=['Age', 'Data', 'App', 'Call', 'Svc'], index=['Age', 'Data', 'App', 'Call', 'Svc'])
+        st.subheader("3. 상관관계 및 다중공선성 진단")
+    
+    col_a, col_b = st.columns([0.6, 0.4])
+    
+    with col_a:
+        st.write("**🔗 Feature Correlation Heatmap**")
+        corr = pd.DataFrame(np.random.uniform(-1, 1, (5, 5)), 
+                             columns=['Age', 'Data', 'App', 'Call', 'Svc'], 
+                             index=['Age', 'Data', 'App', 'Call', 'Svc'])
         st.dataframe(corr.style.background_gradient(cmap='coolwarm').format("{:.2f}"))
+    
+    with col_b:
+        st.write("**🚨 VIF(다중공선성) 위험군**")
+        vif_df = pd.DataFrame({
+            "변수 그룹": ["데이터 사용량 관련", "통화 시간 관련"],
+            "대상 변수": ["total_data, night_data", "total_call, avg_call"],
+            "VIF 지수": [15.2, 12.8],
+            "권고": ["변수 결합(PCA)", "대표 변수 선택"]
+        })
+        st.table(vif_df)
+    
+    st.warning("**[Action]** 상관계수 0.8 이상인 변수 쌍이 다수 발견되었습니다. VIF가 10 이상인 변수들은 선형 모델 사용 시 반드시 하나를 제거하거나 차원을 축소하십시오.")
 
-    with t4:
-        st.subheader("5. 최적 Binning 구간 제안")
-        st.bar_chart(pd.DataFrame({"Target Rate(%)": [45.2, 22.5, 12.0, 5.1]}, index=["0-6m", "6-12m", "12-24m", "24m+"]))
-        st.info("**제안 사유**: 가입 초기(6개월 이내)의 이탈률이 급격히 높아 해당 구간을 별도 관리군으로 분리 권고")
+with t4:
+    st.subheader("4. 최적 Binning 구간 제안")
+    # 어떤 변수인지 명시
+    target_var = "서비스 가입 기간 (svc_period_months)"
+    st.write(f"**대상 변수: `{target_var}`**")
+    
+    bin_df = pd.DataFrame({
+        "이탈 적중률(%)": [45.2, 22.5, 12.0, 5.1],
+        "샘플 수": [1200, 850, 2100, 4500]
+    }, index=["0-6m", "6-12m", "12-24m", "24m+"])
+    
+    st.bar_chart(bin_df["이탈 적중률(%)"])
+    
+    st.success(f"""
+    **[Action] `{target_var}` 피처 엔지니어링 가이드**
+    - **현상**: 가입 6개월 미만 구간에서 타겟(이탈) 밀도가 45%로 매우 높게 나타남.
+    - **제안**: 연속형 변수를 그대로 쓰기보다, 위 4개 구간으로 **Categorical Variable**화 하여 모델에 입력할 것을 권장함. 
+    - **이유**: 특정 구간에서의 비선형적 이탈 특성을 모델이 더 잘 학습할 수 있음.
+    """)
