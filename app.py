@@ -1,92 +1,114 @@
 import streamlit as st
-
-# 세션 상태 초기화 에러 방지를 위해 최상단 배치
-if 'step' not in st.session_state: st.session_state.step = 1
-
 import pandas as pd
 import numpy as np
-import plotly.express as px
+import time
 
-# --- 리포트 렌더링 함수 ---
-def render_custom_report(mode):
-    st.divider()
-    st.header(f"📊 분석 결과 리포트 ({mode})")
+# --- 1. 기본 설정 및 세션 초기화 ---
+st.set_page_config(page_title="Gen-AI EDA Agent", layout="wide")
+
+if 'step' not in st.session_state:
+    st.session_state.step = 1
+if 'mode' not in st.session_state:
+    st.session_state.mode = "🏢 사업팀 인사이트 모드"
+
+# --- 2. 사이드바 (상태 표시) ---
+with st.sidebar:
+    st.title("🤖 Agent Status")
+    st.success("Feature Store 연결됨 (1,500+)")
+    if st.button("🔄 전체 초기화"):
+        st.session_state.step = 1
+        st.rerun()
+
+# --- 3. 메인 화면 ---
+st.title("🔍 Gen-AI EDA Agent")
+st.caption("BigQuery 기반 데이터 탐색 및 한글 물리명 매핑 프로토타입")
+
+# Step 1: 모드 선택
+st.header("Step 1. 분석 모드 선택")
+selected_mode = st.radio(
+    "사용자 유형을 선택하세요.",
+    ["🏢 사업팀 인사이트 모드", "🧪 분석가 데이터 진단 모드"],
+    horizontal=True
+)
+st.session_state.mode = selected_mode
+
+st.divider()
+
+# Step 2: 입력부 (모드별 동적 구성)
+if st.session_state.step == 1:
+    st.header("Step 2. 분석 목적 입력")
     
-    if "사업팀" in mode:
-        # [사업팀용] 1~4번 항목 중심
-        st.info("💡 사업팀 모드는 비즈니스 의사결정을 위한 핵심 인사이트를 요약합니다.")
-        
-        # 항목 1: 데이터 현상 및 가설 검증 결과
-        st.subheader("1️⃣ 가설 검증 및 현상 파악")
+    if "사업팀" in st.session_state.mode:
         c1, c2 = st.columns(2)
-        with c1:
-            st.write("**[입력 가설]**")
-            st.info("연령대가 낮을수록 유튜브 사용량이 높을 것이다.")
-        with c2:
-            st.write("**[검증 결과]**")
-            st.success("✅ 가설 일치: 20대 고객의 유튜브 사용량이 평균 대비 42% 높음 확인")
+        target = c1.text_input("🎯 타겟 정의", "최근 3개월 Sim Only 가입자")
+        hypo = c2.text_area("💡 가설", "20대 유저의 유튜브 사용량이 높을 것이다.", height=68)
+    else:
+        c1, c2 = st.columns(2)
+        y_label = c1.text_input("🎯 Target (Y)", "is_churn")
+        analyst_goal = c2.text_area("📝 분석 목적", "해지 예측 모델용 피처 품질 진단 요청", height=68)
 
-        # 항목 2: 타겟 vs 비교군 특징 차이 (Lift)
-        st.subheader("2️⃣ 타겟 vs 비교군 주요 특징 (Lift)")
-        lift_data = pd.DataFrame({
-            "지표": ["유튜브 시청", "야간 데이터", "멤버십 활용", "평균 ARPU"],
-            "Lift Index": [2.4, 1.8, 1.1, 0.9]
-        })
-        fig_lift = px.bar(lift_data, x="지표", y="Lift Index", color="Lift Index", title="일반 고객 대비 배수(Ratio)")
-        st.plotly_chart(fig_lift, use_container_width=True)
+    if st.button("🪄 AI 변수 매핑 시작", type="primary"):
+        with st.spinner("메타 테이블(1,500개)에서 연관 변수 추출 중..."):
+            time.sleep(1.5)
+            st.session_state.step = 2
+            st.rerun()
 
-        # 항목 3: 핵심 영향 인자 (Top Drivers)
-        st.subheader("3️⃣ 성과에 영향을 주는 핵심 요인")
-        st.markdown("- **최대 요인:** 주말 미디어 소비 시간 (영향도 45%)")
-        st.markdown("- **차순위 요인:** 자급제 단말 이용 여부 (영향도 22%)")
+# Step 3 & Output: 결과 출력부
+if st.session_state.step >= 2:
+    st.header("Step 3. 최종 분석 셋업 및 리포트")
+    
+    # 변수 선택 (멀티셀렉트)
+    default_vars = ["고객 연령", "고객 성별", "데이터 사용량(MB)", "넷플릭스 시청 시간"]
+    st.multiselect("✅ AI 선별 지표 (수정 가능)", options=default_vars + ["평균 통화 시간", "최근 구매 금액"], default=default_vars)
 
-        # 항목 4: 고객 페르소나 및 액션 제안
-        st.subheader("4️⃣ 추천 페르소나 및 전략")
-        p1, p2 = st.columns(2)
-        p1.help("### [Persona: 젊은 스트리머]\n- 특징: 20대, 심야 사용량 높음\n- 제안: 넷플릭스 결합 요금제 노출")
-        p2.help("### [Persona: 실속형 통신족]\n- 특징: 30대, Wi-Fi 위주 사용\n- 제안: 저가형 데이터 소량 요금제 유지")
+    if st.button("🚀 분석 실행 및 리포트 생성"):
+        with st.status("BigQuery 분석 엔진 가동 중...", expanded=True) as status:
+            st.write("SQL 쿼리 생성 및 실행...")
+            time.sleep(1)
+            st.write("통계적 유의성 검정 중...")
+            time.sleep(1)
+            status.update(label="분석 완료!", state="complete", expanded=False)
+        st.session_state.step = 3
+
+if st.session_state.step == 3:
+    st.divider()
+    st.header(f"📊 분석 결과 리포트 ({st.session_state.mode})")
+
+    if "사업팀" in st.session_state.mode:
+        # [사업팀용] 1~4번 항목
+        t1, t2, t3 = st.tabs(["💡 가설/현상(1-2)", "📈 영향도(3)", "🎯 전략(4)"])
+        with t1:
+            st.subheader("1-2. 가설 검증 결과")
+            st.success("✅ 가설 일치: 20대 타겟의 유튜브 사용량이 비교군 대비 2.4배 높음")
+            # 내장 차트 사용 (Plotly 미사용)
+            chart_data = pd.DataFrame([85, 35], index=["타겟", "비교군"], columns=["유튜브 지수"])
+            st.bar_chart(chart_data)
+        with t2:
+            st.subheader("3. 핵심 영향 인자 (Top Drivers)")
+            st.write("분석 결과, **'심야 시간대(22-02시) 데이터 사용량'**이 타겟군을 결정짓는 가장 큰 요인입니다.")
+            st.progress(85, text="영향도: 85%")
+        with t3:
+            st.subheader("4. 추천 페르소나 및 액션")
+            col_p1, col_p2 = st.columns(2)
+            col_p1.info("**Persona: 야행성 스트리머**\n\n- 제안: 넷플릭스 결합 요금제 캠페인 실행")
+            col_p2.warning("**Persona: 알뜰 폰족**\n\n- 제안: 데이터 소량/저가형 요금제 유지 관리")
 
     else:
-        # [분석가용] 5~13번 항목 중심
-        st.warning("🧪 분석가 모드는 모델링 적합성 및 통계적 데이터 품질을 진단합니다.")
-        
-        # 항목 5-6: 데이터 품질 및 분포 진단
-        st.subheader("5️⃣-6️⃣ 데이터 품질 및 기초 통계 진단")
-        q_df = pd.DataFrame({
-            "Feature": ["cust_age", "data_mb", "call_cnt"],
-            "Missing": ["0%", "0.2%", "5.1%"],
-            "Outlier": ["None", "24 (IQR 1.5)", "120 (Z>3)"],
-            "Skewness": [0.12, 2.45, 1.88]
-        })
-        st.table(q_df)
-
-        # 항목 7-8: 상관관계 및 다중공선성 (VIF)
-        st.subheader("7️⃣-8️⃣ 변수 간 관계 및 다중공선성 (VIF)")
-        col_vif, col_corr = st.columns(2)
-        with col_vif:
-            st.write("**VIF 결과**")
-            st.code("data_mb: 8.4 (High)\napp_freq: 2.1 (Low)\n...데이터 처리 필요")
-        with col_corr:
-            corr_m = np.random.rand(4,4)
-            fig_corr = px.imshow(corr_m, x=['A','B','C','D'], y=['A','B','C','D'], title="Correlation Heatmap")
-            st.plotly_chart(fig_corr, use_container_width=True)
-
-        # 항목 9-11: 피처 중요도 및 통계적 유의성 (P-Value)
-        st.subheader("9️⃣-1️⃣1️⃣ 피처 유의성 검정 (P-Value/SHAP)")
-        importance_df = pd.DataFrame({
-            "Feature": ["data_mb", "cust_age", "call_cnt", "svc_period"],
-            "P-Value": [0.001, 0.045, 0.231, 0.002],
-            "Importance": [0.55, 0.21, 0.05, 0.19]
-        }).sort_values('Importance')
-        fig_imp = px.bar(importance_df, x="Importance", y="Feature", orientation='h', color="P-Value")
-        st.plotly_chart(fig_imp, use_container_width=True)
-
-        # 항목 12-13: 분석 한계점 및 모델링 가이드
-        st.subheader("1️⃣2️⃣-1️⃣3️⃣ 분석 한계점 및 Next Step")
-        st.error("⚠️ 위치 데이터(GPS)의 결측치가 40% 이상으로, 해당 피처는 모델링에서 제외할 것을 권고함.")
-        st.success("📝 추천 알고리즘: LightGBM (비선형 관계 및 이상치 대응에 최적)")
-
-# --- 이전 코드의 버튼 클릭 시 호출 부분 ---
-# if st.button("🚀 최종 분석 리포트 생성"):
-#     render_custom_report(st.session_state.current_mode)
-
+        # [분석가용] 5~13번 항목
+        t1, t2, t3 = st.tabs(["🔍 품질진단(5-6)", "⚙️ 통계분석(7-11)", "📐 가이드(12-13)"])
+        with t1:
+            st.subheader("5-6. 데이터 품질 현황")
+            st.table(pd.DataFrame({
+                "지표": ["cust_age", "data_mb", "app_freq"],
+                "결측률": ["0%", "0.2%", "12.4%"],
+                "이상치": ["0건", "24건", "150건"],
+                "조치": ["Keep", "Keep", "Impute"]
+            }))
+        with t2:
+            st.subheader("7-11. 변수 유의성 및 관계")
+            st.write("상관관계 및 피처 중요도 분석 결과")
+            st.area_chart(np.random.randn(10, 2)) # 시뮬레이션 차트
+        with t3:
+            st.subheader("12-13. 한계점 및 가이드")
+            st.error("⚠️ 위치 데이터 결측치(40%) 과다로 모델링 시 제외 권고")
+            st.markdown("- **추천 모델**: XGBoost 또는 LightGBM\n- **Next Step**: 결측치 보정 후 재학습 예정")
