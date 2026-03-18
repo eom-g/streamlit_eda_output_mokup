@@ -20,9 +20,10 @@ if "Profiling" in mode:
     # ---------------------------------------------------------
     # [사업팀용] 1~4번 항목 (결합 및 멤버십 인사이트 보강)
     # ---------------------------------------------------------
-    t1, t2, t3, t4 = st.tabs(["📊 1. 집단간 비교", "👤 2. 서비스 수용도 & 멤버십", "📱 3. 채널 선호도", "💡 4. 결론 및 제언"])
+t1, t2, t3, t4 = st.tabs(["📊 1. 집단간 비교", "👤 2. 기본 프로파일링", "📱 3. 채널 선호도", "💡 4. 결론 및 제언"])
     
     with t1:
+        # (1) 기존 지표: Index (전체 대비 특징)
         st.subheader("📍 지표별 특징 Index (전체 대비)")
         idx_df = pd.DataFrame({
             "지표명": ["유튜브 시청시간", "야간 데이터사용", "주말 통화량", "멤버십 활용"],
@@ -33,35 +34,86 @@ if "Profiling" in mode:
             col_l.write(f"**{row['지표명']}**")
             col_r.progress(min(row['Index']/300, 1.0), text=f"Index: {row['Index']}")
         
+        st.divider()
+
+        # (2) 기존 지표: IV Rank (변수별 예측력)
         st.subheader("🔍 변수별 예측력 (IV Rank)")
-        st.bar_chart(pd.DataFrame({"IV Score": [0.45, 0.32, 0.15]}, index=["데이터사용량", "앱접속빈도", "연령"]))
-
-    with t2:
-        st.subheader("👤 Sim Only 타겟 서비스 수용도 및 소비 패턴")
-        c1, c2 = st.columns(2)
-        
-        with c1:
-            st.write("**🔗 결합 및 약정 현황**")
-            # 유무선/무무선 결합 비율 백데이터 (Sim Only 특성 반영)
-            comb_df = pd.DataFrame({
-                "결합 유형": ["미결합(단독)", "유무선 결합", "무무선 결합"],
-                "비중(%)": [78.4, 15.2, 6.4]
-            }).set_index("결합 유형")
-            st.bar_chart(comb_df)
-            st.caption("💡 Sim Only 고객은 결합 혜택을 통한 락인(Lock-in) 효과가 매우 낮음 (미결합 78%)")
-
-        with c2:
-            st.write("**🎁 멤버십 카테고리별 이용 지수**")
-            # 내부 서비스 vs 생활 소비 대조 데이터
-            member_df = pd.DataFrame({
-                "카테고리": ["생활/외식", "자동차/주유", "데이터나눠쓰기", "통신사 부가서비스"],
-                "이용 지수(Index)": [145, 128, 62, 45]
-            }).set_index("카테고리")
-            st.bar_chart(member_df)
-            st.caption("💡 통신사 내부 서비스보다 실생활 소비(외식/자동차) 중심의 멤버십 이용이 두드러짐")
+        iv_data = pd.DataFrame({"IV Score": [0.45, 0.32, 0.15, 0.08]}, 
+                               index=["데이터사용량", "앱접속빈도", "연령", "가입기간"])
+        st.bar_chart(iv_data)
+        st.caption("※ IV(Information Value)가 높을수록 해당 변수가 타겟을 구분하는 힘이 강함")
 
         st.divider()
-        st.write("**🎂 타겟 연령대 분포**")
+
+        # (3) 이동된 지표: 결합 및 멤버십 비교
+        st.subheader("🔗 집단간 서비스 이용 행태 비교")
+        c1, col_gap, c2 = st.columns([0.45, 0.1, 0.45])
+        with c1:
+            st.write("**[결합/약정] Sim Only vs 전체**")
+            comb_df = pd.DataFrame({
+                "미결합(단독)": [78.4, 32.1],
+                "유무선 결합": [15.2, 55.4],
+                "무무선 결합": [6.4, 12.5]
+            }, index=["Sim Only(대상)", "전체 가입자"])
+            st.bar_chart(comb_df)
+            
+        with c2:
+            st.write("**[멤버십] 카테고리별 이용 지수**")
+            member_df = pd.DataFrame({
+                "이용 지수(Index)": [145, 128, 62, 45]
+            }, index=["생활/외식", "자동차/주유", "데이터나눠쓰기", "통신사 서비스"])
+            st.bar_chart(member_df)
+
+        st.divider()
+
+        # (4) 신규 지표: WoE/Lift Combo Chart
+        st.subheader("📉 WoE/Lift Combo Chart (구간별 변별력)")
+        bins = ["Bin 1", "Bin 2", "Bin 3", "Bin 4", "Bin 5"]
+        lift_data = [2.5, 1.8, 1.2, 0.8, 0.5]
+        woe_data = [0.8, 0.4, 0.1, -0.3, -0.7]
+
+        fig = go.Figure()
+        fig.add_trace(go.Bar(x=bins, y=lift_data, name="Lift (전체 대비 배수)", yaxis="y1", marker_color='rgba(100, 149, 237, 0.6)'))
+        fig.add_trace(go.Scatter(x=bins, y=woe_data, name="WoE (변별력 지표)", yaxis="y2", mode='lines+markers', line_color='orange'))
+
+        fig.update_layout(
+            yaxis=dict(title="Lift Score", side="left"),
+            yaxis2=dict(title="WoE Value", overlaying="y", side="right"),
+            legend=dict(x=0, y=1.1, orientation="h"),
+            margin=dict(l=0, r=0, t=30, b=0)
+        )
+        st.plotly_chart(fig, use_container_width=True)
+
+    with t2:
+        # ---------------------------------------------------------
+        # [사업팀용] 2. 기본 프로파일링 (Doughnut/Pie 비중 중심)
+        # ---------------------------------------------------------
+        st.subheader("👤 타겟 기본 프로파일링")
+        p1, p2 = st.columns(2)
+        with p1:
+            st.write("**⚧ 성별 비중**")
+            st.write("남성: 62% / 여성: 38%")
+            st.progress(0.62)
+            
+            st.write("**📱 단말 유형 비중**")
+            # 성별/단말유형 비중 (도넛 차트 대신 테이블/진행바 조합으로 깔끔하게 구성)
+            device_df = pd.DataFrame({
+                "유형": ["아이폰", "갤럭시프리미엄", "갤럭시중저가", "키즈폰", "중고/기타"],
+                "비중(%)": [45, 35, 10, 2, 8]
+            }).set_index("유형")
+            st.table(device_df)
+
+        with p2:
+            st.write("**📝 가입 및 요금제 유형**")
+            type_df = pd.DataFrame({
+                "Sim Only": [100, 0], # vs 단말약정
+                "중저가 요금제": [60, 40] # vs 고가
+            }, index=["해당 유형", "기타"])
+            st.bar_chart(type_df)
+            st.caption("※ 분석 대상 가입자의 100%가 Sim Only, 60%가 중저가 요금제 이용 중")
+
+        st.divider()
+        st.write("**🎂 연령대 분포**")
         age_groups = ["10대", "20대", "30대", "40대", "50대", "60대 이상"]
         st.bar_chart(pd.DataFrame({"고객 수(명)": [5, 48, 28, 12, 5, 2]}, index=age_groups))
 
