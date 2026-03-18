@@ -96,7 +96,7 @@ else:
             color = 'lightcoral' if val == 'High' else 'white'
             return f'background-color: {color}'
         
-        st.dataframe(card_df.style.applymap(color_high_status, subset=['Status']))
+        st.dataframe(card_df.style.map(color_high_status, subset=['Status']))
 
     with t2:
         st.subheader("3️⃣ Outlier 영향도 분석 (이상치 제거 전/후)")
