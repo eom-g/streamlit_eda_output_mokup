@@ -88,7 +88,7 @@ else:
     
     with t1:
         st.subheader("1-1. Zero-Variance 변수 식별")
-        st.table(pd.DataFrame({"변수명": ["is_active", "country"], "값": ["Y", "82"], "조치": ["제거", "제거"]}))
+        st.table(pd.DataFrame({"변수명": ["is_active", "country"], "현재 값": ["Y", "82"], "비고": ["Zero-Variance", "Zero-Variance"]}))
         
         st.subheader("1-2. Cardinality 체크")
         card_df = pd.DataFrame({"변수명": ["area", "model", "grade"], "Unique": [1450, 420, 5], "Status": ["High", "High", "Normal"]})
