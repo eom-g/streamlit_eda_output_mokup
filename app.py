@@ -85,7 +85,7 @@ if "Profiling" in mode:
         )
         st.plotly_chart(fig, use_container_width=True)
 
-with t2:
+    with t2:
         st.subheader("👤 타겟 기본 프로파일링")
         p1, p2 = st.columns(2)
         
