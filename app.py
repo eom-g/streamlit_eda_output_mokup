@@ -1,7 +1,8 @@
 import streamlit as st
 import pandas as pd
 import numpy as np
-import plotly.graph_objects as go  # 이 줄이 누락되었을 가능성이 높습니다!
+import plotly.graph_objects as go
+import plotly.express as px
 
 # --- 1. 페이지 설정 ---
 st.set_page_config(page_title="EDA Agent Premium Report", layout="wide")
