@@ -89,3 +89,4 @@ def render_custom_report(mode):
 # --- 이전 코드의 버튼 클릭 시 호출 부분 ---
 # if st.button("🚀 최종 분석 리포트 생성"):
 #     render_custom_report(st.session_state.current_mode)
+
