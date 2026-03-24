@@ -4,227 +4,158 @@ import numpy as np
 import plotly.graph_objects as go
 import plotly.express as px
 
-# --- 1. 페이지 설정 ---
-st.set_page_config(page_title="EDA Agent Premium Report", layout="wide")
+# --- 1. 기본 페이지 설정 ---
+st.set_page_config(page_title="Advanced EDA Dashboard", layout="wide")
 
-# --- 2. 사이드바 제어 ---
+# --- 2. 사이드바 (글로벌 컨트롤) ---
 with st.sidebar:
     st.title("🎯 Report Control")
-    mode = st.radio("리포트 모드 선택", ["🏢 Target Profiling Mode", "🧪 Feature Engineering Mode"])
+    user_role = st.sidebar.radio("사용자 모드 선택", ["🏢 Target Profiling Mode", "🧪 Feature Engineering Mode"])
     st.divider()
-    st.caption("분석 대상: 최근 3개월 Sim Only 신규 가입자")
+    st.info("**분석 데이터 정보**\n- 대상: 최근 3개월 Sim Only 가입자\n- 기간: '26.01.01 ~ '26.03.20\n- 모수: 15,200명")
+    st.divider()
+    st.caption("Produced by Gemini 3 Flash")
 
-# --- 3. 메인 리포트 ---
-st.title(f"📊 최종 분석 리포트 ({mode})")
+# --- 3. 메인 리포트 영역 ---
+st.title(f"📊 {user_role} 리포트")
 st.divider()
 
-if "Profiling" in mode:
-    # ---------------------------------------------------------
-    # [사업팀용] 1~4번 항목 (결합 및 멤버십 인사이트 보강)
-    # ---------------------------------------------------------
-    t1, t2, t3, t4 = st.tabs(["📊 1. 집단간 비교", "👤 2. 기본 프로파일링", "📱 3. 채널 선호도", "💡 4. 결론 및 제언"])
-    
-    with t1:
-        # (1) 기존 지표: Index (전체 대비 특징)
-        st.subheader("📍 지표별 특징 Index (전체 대비)")
-        idx_df = pd.DataFrame({
-            "지표명": ["유튜브 시청시간", "야간 데이터사용", "주말 통화량", "멤버십 활용"],
-            "Index": [242, 185, 110, 95]
-        }).sort_values("Index", ascending=False)
-        for _, row in idx_df.iterrows():
-            col_l, col_r = st.columns([0.2, 0.8])
-            col_l.write(f"**{row['지표명']}**")
-            col_r.progress(min(row['Index']/300, 1.0), text=f"Index: {row['Index']}")
+# ---------------------------------------------------------------------------
+# CASE A: 사업팀 인사이트 모드 (Business Mode)
+# ---------------------------------------------------------------------------
+if user_role == "🏢 Target Profiling Mode":
+    tab1, tab2, tab3 = st.tabs(["📋 Summary View", "🔍 Detail View", "🛡️ Guide & Trust"])
+
+    with tab1:
+        st.subheader("👤 타겟 페르소나 리포트")
+        col1, col2 = st.columns([0.4, 0.6])
         
-        st.divider()
-
-        # (2) 기존 지표: IV Rank (변수별 예측력)
-        st.subheader("🔍 변수별 예측력 (IV Rank)")
-        iv_data = pd.DataFrame({"IV Score": [0.45, 0.32, 0.15, 0.08]}, 
-                               index=["데이터사용량", "앱접속빈도", "연령", "가입기간"])
-        st.bar_chart(iv_data)
-        st.caption("※ IV(Information Value)가 높을수록 해당 변수가 타겟을 구분하는 힘이 강함")
-
-        st.divider()
-
-        # (3) 이동된 지표: 결합 및 멤버십 비교
-        st.subheader("🔗 집단간 서비스 이용 행태 비교")
-        c1, col_gap, c2 = st.columns([0.45, 0.1, 0.45])
-        with c1:
-            st.write("**[결합/약정] Sim Only vs 전체**")
-            comb_df = pd.DataFrame({
-                "미결합(단독)": [78.4, 32.1],
-                "유무선 결합": [15.2, 55.4],
-                "무무선 결합": [6.4, 12.5]
-            }, index=["Sim Only(대상)", "전체 가입자"])
-            st.bar_chart(comb_df)
-            
-        with c2:
-            st.write("**[멤버십] 카테고리별 이용 지수**")
-            member_df = pd.DataFrame({
-                "이용 지수(Index)": [145, 128, 62, 45]
-            }, index=["생활/외식", "자동차/주유", "데이터나눠쓰기", "통신사 서비스"])
-            st.bar_chart(member_df)
-
-        st.divider()
-
-        # (4) 신규 지표: WoE/Lift Combo Chart
-        st.subheader("📉 WoE/Lift Combo Chart (구간별 변별력)")
-        bins = ["Bin 1", "Bin 2", "Bin 3", "Bin 4", "Bin 5"]
-        lift_data = [2.5, 1.8, 1.2, 0.8, 0.5]
-        woe_data = [0.8, 0.4, 0.1, -0.3, -0.7]
-
-        fig = go.Figure()
-        fig.add_trace(go.Bar(x=bins, y=lift_data, name="Lift (전체 대비 배수)", yaxis="y1", marker_color='rgba(100, 149, 237, 0.6)'))
-        fig.add_trace(go.Scatter(x=bins, y=woe_data, name="WoE (변별력 지표)", yaxis="y2", mode='lines+markers', line_color='orange'))
-
-        fig.update_layout(
-            yaxis=dict(title="Lift Score", side="left"),
-            yaxis2=dict(title="WoE Value", overlaying="y", side="right"),
-            legend=dict(x=0, y=1.1, orientation="h"),
-            margin=dict(l=0, r=0, t=30, b=0)
-        )
-        st.plotly_chart(fig, use_container_width=True)
-
-    with t2:
-        st.subheader("👤 타겟 기본 프로파일링")
-        p1, p2 = st.columns(2)
-        
-        with p1:
-            st.write("**⚧ 성별 비중 (Gender Distribution)**")
-            # 1. 성별 도넛 차트 (한눈에 들어오는 시각화)
+        with col1:
+            st.write("**⚧ 성별 및 단말 비중**")
             gender_data = pd.DataFrame({"성별": ["남성", "여성"], "비중": [62, 38]})
-            fig_gender = px.pie(gender_data, values='비중', names='성별', hole=0.6,
+            fig_gender = px.pie(gender_data, values='비중', names='성별', hole=0.6, 
                                 color_discrete_sequence=['#636EFA', '#EF553B'])
-            fig_gender.update_layout(margin=dict(l=20, r=20, t=20, b=20), height=300, showlegend=True)
+            fig_gender.update_layout(height=300, margin=dict(l=20, r=20, t=20, b=20))
             st.plotly_chart(fig_gender, use_container_width=True)
             
-            st.write("**📱 단말 유형 비중**")
             device_df = pd.DataFrame({
-                "유형": ["아이폰", "갤럭시프리미엄", "갤럭시중저가", "중고/기타"],
+                "유형": ["아이폰", "갤럭시프리미엄", "갤럭시중저가", "기타"],
                 "비중(%)": [45, 35, 12, 8]
             }).set_index("유형")
             st.table(device_df)
 
-        with p2:
-            st.write("**📝 가입 및 요금제 구성 (Service Mix)**")
-            # 2. 가입/요금제 유형: 원래 의도는 '주력 그룹'을 대비시켜 보여주는 것
-            # 범주별로 데이터를 분리하여 Grouped Bar Chart로 구성
-            mix_data = pd.DataFrame({
-                "구분": ["가입유형", "가입유형", "요금제", "요금제"],
-                "항목": ["Sim Only", "단말약정", "중저가", "고가"],
-                "비중(%)": [100, 0, 60, 40]
-            })
+        with col2:
+            st.write("**🚀 핵심 변별 지표 (Top 5 Differentiators)**")
+            diff_df = pd.DataFrame({
+                "지표명": ["유튜브 시청 지수", "심야 데이터 사용량", "앱 접속 빈도", "주말 활동 지수", "멤버십 활용도"],
+                "Index": [242, 185, 140, 115, 92]
+            }).sort_values("Index", ascending=True)
             
-            fig_mix = px.bar(mix_data, x="구분", y="비중(%)", color="항목", barmode="group",
-                             text="비중(%)", color_discrete_sequence=px.colors.qualitative.Pastel)
-            fig_mix.update_layout(height=400, showlegend=True, uniformtext_mode='hide')
-            st.plotly_chart(fig_mix, use_container_width=True)
-            
-            st.info("💡 **의도 분석**: 본 타겟은 **Sim Only(100%)**와 **중저가 요금제(60%)**의 결합 비중이 매우 높아, 결합 할인보다 '순수 요금 가성비'를 중시하는 집단임을 보여줍니다.")
+            fig_diff = px.bar(diff_df, x="Index", y="지표명", orientation='h', text="Index",
+                              color="Index", color_continuous_scale='Blues')
+            st.plotly_chart(fig_diff, use_container_width=True)
+            st.info("**💡 Insight**: 본 타겟은 전체 대비 유튜브 시청이 **2.4배** 높으며, 심야 활동이 두드러지는 '2030 나이트아울' 집단입니다.")
 
-        st.divider()
-        st.write("**🎂 연령대 분포 상세**")
-        age_df = pd.DataFrame({
-            "연령대": ["10대", "20대", "30대", "40대", "50대", "60대+"],
-            "고객 수": [5, 48, 28, 12, 5, 2]
-        })
-        fig_age = px.bar(age_df, x="연령대", y="고객 수", text="고객 수", color="연령대")
-        st.plotly_chart(fig_age, use_container_width=True)
-
-    with t3:
-        st.subheader("📣 채널 선호도 반응 분석")
-        st.bar_chart(pd.DataFrame({"반응": [45, 12, 28], "미반응": [55, 88, 72]}, index=["App Push", "MMS", "알림톡"]))
-
-    with t4:
-        st.subheader("💡 분석 결과 요약 및 전략 제언")
-        st.info("### 📝 핵심 인사이트 (Executive Summary)")
-        st.markdown("""
-        1. **타겟 정체성**: 이번 분석 대상인 'Sim Only' 가입자는 **2030 야행성 데이터 헤비 유저**이며, 특정 통신사에 락인되지 않은 **자립형 고객**입니다. 
-        2. **결합 및 소속도 저하**: 유무선/무무선 결합률이 20% 미만으로 매우 낮으며, '데이터 나눠쓰기'나 '통신사 부가서비스' 등 내부 생태계 이용률(Index 45~62) 또한 저조합니다. 이는 통신사 브랜드에 대한 충성도보다 **개인화된 실속 혜택**에 민감함을 시사합니다.
-        3. **생활 밀착형 소비 패턴**: 멤버십 사용 이력을 보면 **외식, 자동차(주유/정비)** 등 실생활 소비 카테고리에서의 이용 지수(Index 145)가 높게 나타납니다. 
-        4. **접점 최적화**: 활동 정점인 심야 시간대(22-02시)에 **App Push**를 통한 소통이 가장 효과적(반응률 45%)입니다.
-        """)
-        st.success("### 🎯 실행 제언 (Action Plan)\n- **[상품]** 통신사 내부 서비스 묶음보다는 '유튜브/OTT' 등 외부 콘텐츠 결합 및 '실속형 데이터 충전' 상품 강화\n- **[마케팅]** 멤버십 이용이 많은 '외식/주유' 관련 타겟팅 쿠폰을 App Push로 발송하여 체감 혜택 극대화")
-
-else:
-    # ---------------------------------------------------------
-    # [분석가용] 데이터 진단 모드 (동일)
-    # ---------------------------------------------------------
-    t1, t2, t3, t4 = st.tabs(["🧹 1. Cleansing/Cardinality", "📉 2. 이상치 영향도", "🔗 3. 상관관계/VIF", "📐 4. Binning 제안"])
-
-    with t1:
-        st.subheader("1. 데이터 품질 진단")
-        st.write("**[Action]** 아래 변수들은 모델 성능을 저해하거나 연산 낭비를 초래하므로 삭제를 권고합니다.")
-        st.table(pd.DataFrame({
-            "변수명": ["is_active", "country_code"], 
-            "진단 결과": ["Zero-Variance (값 하나)", "Zero-Variance (값 하나)"], 
-            "조치": ["삭제", "삭제"]
-        }))
-        
-        card_df = pd.DataFrame({
-            "변수명": ["main_area_code", "device_model", "cust_grade"],
-            "Unique Count": [1450, 420, 5],
-            "상태": ["High", "High", "Normal"]
-        })
-        st.dataframe(card_df.style.map(lambda x: 'background-color: lightcoral' if x == 'High' else '', subset=['상태']))
-        st.caption("※ High Cardinality 변수는 Target Encoding 또는 차원 축소가 필요합니다.")
-
-    with t2:
-        st.subheader("2. Outlier 영향도 분석")
-        st.info("💡 이상치 제거 전/후의 평균 변화율이 10% 이상인 피처는 정제가 필수적입니다.")
+    with tab2:
+        st.subheader("🔍 고객 행태 딥다이브")
         c1, c2 = st.columns(2)
         with c1:
-            st.write("**[전] data_usage_mb**")
-            st.bar_chart(np.random.exponential(50, 15))
-        with c2:
-            st.write("**[후] data_usage_mb**")
-            st.bar_chart(np.random.normal(30, 5, 15))
-    
-        stat_df = pd.DataFrame({"항목": ["평균", "표준편차"], "data_usage": ["-29.2%", "-45.1%"]}).set_index("항목")
-        st.table(stat_change := stat_df)
-        st.error("**[Action]** 'data_usage_mb'는 이상치가 평균을 약 30% 왜곡하고 있어, RobustScaler 적용 또는 Capping 처리를 제안합니다.")
-
-    with t3:
-        st.subheader("3. 상관관계 및 다중공선성 진단")
-    
-        col_a, col_b = st.columns([0.6, 0.4])
-    
-        with col_a:
-            st.write("**🔗 Feature Correlation Heatmap**")
-            corr = pd.DataFrame(np.random.uniform(-1, 1, (5, 5)), 
-                                 columns=['Age', 'Data', 'App', 'Call', 'Svc'], 
-                                 index=['Age', 'Data', 'App', 'Call', 'Svc'])
-            st.dataframe(corr.style.background_gradient(cmap='coolwarm').format("{:.2f}"))
-    
-        with col_b:
-            st.write("**🚨 VIF(다중공선성) 위험군**")
-            vif_df = pd.DataFrame({
-                "변수 그룹": ["데이터 사용량 관련", "통화 시간 관련"],
-                "대상 변수": ["total_data, night_data", "total_call, avg_call"],
-                "VIF 지수": [15.2, 12.8],
-                "권고": ["변수 결합(PCA)", "대표 변수 선택"]
+            st.write("**🔗 결합 유형 비교 (vs 전체)**")
+            comb_df = pd.DataFrame({
+                "구분": ["Sim Only(대상)", "전체 가입자", "Sim Only(대상)", "전체 가입자"],
+                "결합상태": ["미결합", "미결합", "결합중", "결합중"],
+                "비중(%)": [78.4, 32.1, 21.6, 67.9]
             })
-            st.table(vif_df)
-    
-        st.warning("**[Action]** 상관계수 0.8 이상인 변수 쌍이 다수 발견되었습니다. VIF가 10 이상인 변수들은 선형 모델 사용 시 반드시 하나를 제거하거나 차원을 축소하십시오.")
+            fig_comb = px.bar(comb_df, x="구분", y="비중(%)", color="결합상태", barmode="group")
+            st.plotly_chart(fig_comb, use_container_width=True)
 
-    with t4:
-        st.subheader("4. 최적 Binning 구간 제안")
-        # 어떤 변수인지 명시
-        target_var = "서비스 가입 기간 (svc_period_months)"
-        st.write(f"**대상 변수: `{target_var}`**")
-    
-        bin_df = pd.DataFrame({
-            "이탈 적중률(%)": [45.2, 22.5, 12.0, 5.1],
-            "샘플 수": [1200, 850, 2100, 4500]
-        }, index=["0-6m", "6-12m", "12-24m", "24m+"])
-    
-        st.bar_chart(bin_df["이탈 적중률(%)"])
-    
-        st.success(f"""
-        **[Action] `{target_var}` 피처 엔지니어링 가이드**
-        - **현상**: 가입 6개월 미만 구간에서 타겟(이탈) 밀도가 45%로 매우 높게 나타남.
-        - **제안**: 연속형 변수를 그대로 쓰기보다, 위 4개 구간으로 **Categorical Variable**화 하여 모델에 입력할 것을 권장함. 
-        - **이유**: 특정 구간에서의 비선형적 이탈 특성을 모델이 더 잘 학습할 수 있음.
-        """)
+        with c2:
+            st.write("**🎁 멤버십 카테고리 이용 지수**")
+            member_df = pd.DataFrame({
+                "카테고리": ["생활/외식", "자동차/주유", "데이터나눠쓰기", "통신사 서비스"],
+                "Index": [145, 128, 62, 45]
+            })
+            fig_member = px.bar(member_df, x="카테고리", y="Index", color="Index")
+            st.plotly_chart(fig_member, use_container_width=True)
+
+        st.divider()
+        st.write("**📣 채널 선호도 및 최적 시간대**")
+        ch_col, time_col = st.columns(2)
+        with ch_col:
+            st.bar_chart(pd.DataFrame({"반응률(%)": [45, 12, 28]}, index=["App Push", "MMS", "알림톡"]))
+        with time_col:
+            time_data = pd.DataFrame({"시간": list(range(24)), "활동량": np.random.normal(50, 15, 24)})
+            st.line_chart(time_data.set_index("시간"))
+
+    with tab3:
+        st.subheader("🛡️ 데이터 분석 가이드 및 신뢰도")
+        col_t1, col_t2 = st.columns(2)
+        with col_t1:
+            st.success("**✅ 데이터 신뢰 점수: 98.2%**\n\n품질 검증이 완료된 정교한 데이터셋입니다.")
+            st.write("**📍 분석 대상 범위**")
+            st.write("- **기간**: 2026.01.01 ~ 2026.03.20\n- **대상**: 최근 3개월 내 가입한 Sim Only 고객\n- **제외**: 법인, 일시정지, 테스트 단말")
+        with col_t2:
+            st.write("**📙 주요 용어 사전**")
+            with st.expander("유튜브 시청 지수 (Index)란?"):
+                st.write("전체 가입자의 평균 유튜브 시청 시간을 100으로 놓았을 때, 해당 타겟 그룹의 상대적인 시청 시간 배수를 의미합니다.")
+            with st.expander("심야 데이터 헤비 유저 (Night-Owl)"):
+                st.write("22시부터 익일 04시 사이의 데이터 사용 비중이 전체 사용량의 40%를 초과하는 고객군입니다.")
+
+# ---------------------------------------------------------------------------
+# CASE B: 분석가 데이터 진단 모드 (Analyst Mode)
+# ---------------------------------------------------------------------------
+else:
+    tab1, tab2, tab3 = st.tabs(["📊 Summary View", "📐 Detail View", "🛠️ Data Quality"])
+
+    with tab1:
+        st.subheader("📊 피처 중요도 리포트 (IV Rank)")
+        iv_df = pd.DataFrame({
+            "Variable": ["total_data_mb", "app_visit_cnt", "svc_period", "age", "avg_call_min"],
+            "IV_Score": [0.45, 0.32, 0.15, 0.08, 0.03]
+        }).sort_values("IV_Score", ascending=True)
+        fig_iv = px.bar(iv_df, x="IV_Score", y="Variable", orientation='h', color="IV_Score")
+        st.plotly_chart(fig_iv, use_container_width=True)
+        
+        st.write("**📉 데이터셋 기초 통계 요약**")
+        st.table(pd.DataFrame({
+            "항목": ["Total Rows", "Total Columns", "Missing Rate", "Outlier Count"],
+            "Value": ["15,200", "45", "0.2%", "228건"]
+        }))
+
+    with tab2:
+        st.subheader("📐 변수별 상세 진단 (Interactive)")
+        target_var = st.selectbox("진단할 변수 선택", ["svc_period_months", "data_usage_mb", "membership_points"])
+        
+        # WoE/Lift Combo Chart
+        bins = ["Bin 1", "Bin 2", "Bin 3", "Bin 4", "Bin 5"]
+        lift_data = [2.5, 1.8, 1.2, 0.8, 0.5]
+        woe_data = [0.8, 0.4, 0.1, -0.3, -0.7]
+
+        fig_combo = go.Figure()
+        fig_combo.add_trace(go.Bar(x=bins, y=lift_data, name="Lift (배수)", yaxis="y1", marker_color='lightblue'))
+        fig_combo.add_trace(go.Scatter(x=bins, y=woe_data, name="WoE (지표)", yaxis="y2", mode='lines+markers', line_color='orange'))
+        fig_combo.update_layout(yaxis=dict(title="Lift"), yaxis2=dict(title="WoE", overlaying="y", side="right"),
+                                legend=dict(x=0, y=1.1, orientation="h"))
+        st.plotly_chart(fig_combo, use_container_width=True)
+        st.warning(f"**[Advice]** `{target_var}` 변수는 Bin 1~2 구간에서 강력한 비선형 패턴이 관측되므로 범주화(Binning)를 권장합니다.")
+
+    with tab3:
+        st.subheader("🛠️ 기술적 결함 리포트")
+        st.write("**1️⃣ Zero-Variance & Cardinality Audit**")
+        
+        qual_df = pd.DataFrame({
+            "변수명": ["is_active", "country_code", "area_code", "device_model", "cust_grade"],
+            "Unique": [1, 1, 1450, 420, 5],
+            "상태": ["Zero-Var", "Zero-Var", "High", "High", "Normal"],
+            "조치": ["삭제", "삭제", "Target Encoding", "Target Encoding", "유지"]
+        })
+        
+        def color_status(val):
+            color = 'lightcoral' if val in ['Zero-Var', 'High'] else 'white'
+            return f'background-color: {color}'
+        
+        st.dataframe(qual_df.style.map(color_status, subset=['상태']))
+        
+        st.divider()
+        st.write("**2️⃣ VIF(다중공선성) 위험군**")
+        st.error("**Alert**: `total_data_mb`와 `night_data_mb`의 VIF 지수가 15.2로 산출되었습니다. 변수 통합(PCA)이 필요합니다.")
